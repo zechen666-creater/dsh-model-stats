@@ -1,0 +1,6 @@
+# 宿主半：注册一条只读路由，按 sessionId 从会话日志折叠出每模型用量。
+- insert:
+    - id: model-stats
+      name: dsh-model-stats
+      config:
+        enabled: true
