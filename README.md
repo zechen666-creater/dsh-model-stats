@@ -1,13 +1,13 @@
 # dsh-model-stats 按模型用量
 
-在 DSH 对话界面**输入框那一排**（宿主统计条旁）加一个小面板：
+在 DSH 对话界面**输入框那一排**（DSH 统计条旁）加一个小面板：
 按 **提供方 / 模型** 分列显示 —— **总 token、缓存读、未缓存输入、输出、缓存命中率、输出速率(tok/s)**。
 
-一个对话里换过几个模型时，宿主自带的统计只给**整会话汇总**，不按模型拆；本插件补上这个缺口。
+一个对话里换过几个模型时，DSH 自带的统计只给**整会话汇总**，不按模型拆；本插件补上这个缺口。
 
 ## 面板长什么样
 
-输入框那排的宿主统计条旁，多出一颗「N 个模型 · X 输出」药丸：
+输入框那排的DSH 统计条旁，多出一颗「N 个模型 · X 输出」药丸：
 
 ![stats bar](docs/screenshots/stats-bar.png)
 
@@ -22,9 +22,9 @@
 | mimo-v2.6-flash | 41.1M | 40.0M | 933K | 180K | 97.7% | 58 tok/s |
 | deepseek-v4.1-flash | 21.3M | 20.8M | 273K | 208K | 98.7% | 223 tok/s |
 
-## 口径（与宿主一致，不是自创）
+## 口径（与 DSH 一致，不是自创）
 
-| 指标 | 算法 | 对齐的宿主口径 |
+| 指标 | 算法 | 对齐的 DSH 口径 |
 |---|---|---|
 | 缓存命中率 | 缓存读 ÷（缓存读 + 未缓存输入） | `ui-chat` 的 `formatCacheHitPercent(cacheReadTokens, totalTokens - outputTokens)` |
 | 输出速率 | 输出 token ÷ 解码耗时 | `dsh-session-stats` 的 `decodeTokens / decodeMs`，其中解码耗时 = 消息完成时刻 − 首个流式帧时刻 |
@@ -32,7 +32,7 @@
 
 ## 架构
 
-- **宿主半** `lib/index.js`：注册只读路由
+- **DSH 端** `lib/index.js`：注册只读路由
   `GET /plugins/dsh-model-stats/stats?sessionId=…`，读
   `DSH_HOME/sessions/**/<sessionId>/session.v4.jsonl.zstd`，解 zstd 帧后折叠。
   按 `(mtime, size)` 缓存折叠结果，5 秒轮询不会反复解压。
@@ -61,14 +61,14 @@ dsh plugin --profile desktop remove dsh-model-stats
 
 - 面板只统计**已写盘**的用量，不是实时流；每 5 秒刷新一次。
 - 解压/折叠只在会话文件 `(mtime,size)` 变化时重算。
-- 面板渲染在 composer dock，紧凑模式的宿主统计条仍然并排存在 —— 不隐藏宿主任何东西。
+- 面板渲染在 composer dock，紧凑模式的DSH 统计条仍然并排存在 —— 不隐藏 DSH 自带的任何东西。
 
 ## 开关（两种，分工不同）
 
 | 想干嘛 | 在哪 | 效果 | 生效方式 |
 |---|---|---|---|
-| **只隐藏面板**（数据不丢） | 输入框那排按模型统计条，点右侧 **⏸** | 面板消失、**停止 5 秒轮询**；宿主路由仍在但只是按 (mtime,size) 缓存读 | **即时**，localStorage 持久，跨会话跨刷新记住 |
-| **彻底停用整个插件** | 侧栏 → **插件** → 已安装 → `dsh-model-stats` 组合包开关 | 往 `cordis.patch.yml` 写 `disabled: true`，宿主路由 + 客户端面板**都停** | 热重载；若提示 `restart-required` 则重启一次 |
+| **只隐藏面板**（数据不丢） | 输入框那排按模型统计条，点右侧 **⏸** | 面板消失、**停止 5 秒轮询**；DSH 路由仍在但只是按 (mtime,size) 缓存读 | **即时**，localStorage 持久，跨会话跨刷新记住 |
+| **彻底停用整个插件** | 侧栏 → **插件** → 已安装 → `dsh-model-stats` 组合包开关 | 往 `cordis.patch.yml` 写 `disabled: true`，DSH 路由 + 客户端面板**都停** | 热重载；若提示 `restart-required` 则重启一次 |
 
 重新打开面板：点 **「按模型统计 · 已关 ▶」**；或控制台执行 `dshModelStats.on()` / `dshModelStats.off()`（即时生效，不用重启）。
 
@@ -116,7 +116,7 @@ localStorage.setItem("dsh-model-stats:provAbbr", JSON.stringify({"my-relay":"mr"
 | 0.5.2 | 弹层删除页脚，只保留标题+表格 |
 | 0.5.1 | 触发器去掉小箭头，只留图标+标签 |
 | 0.5.0 | 根节点挂 `data-composer-stats`，与 composer-glass 毛玻璃胶囊联动（玻璃开关同进同出） |
-| 0.4.0 | 弹层对齐宿主 stat-dialog：点击外部/Esc 关闭、portal 到 body、锚定自动定位并夹视口；面板列数定为 5 列（缓存明细进悬停提示） |
-| 0.3.0 | 样式重写：药丸/配色/字号全部走宿主 StatsPills 规格与 `--dsw-alias-*` 主题变量，浅色/深色自动适配 |
+| 0.4.0 | 弹层对齐 DSH 的 stat-dialog：点击外部/Esc 关闭、portal 到 body、锚定自动定位并夹视口；面板列数定为 5 列（缓存明细进悬停提示） |
+| 0.3.0 | 样式重写：药丸/配色/字号全部走 DSH StatsPills 规格与 `--dsw-alias-*` 主题变量，浅色/深色自动适配 |
 | 0.2.0 | 面板级开关（localStorage 持久，刷新记住） |
-| 0.1.0 | 初版：按模型折叠会话用量，补宿主统计不按模型拆分的缺口 |
+| 0.1.0 | 初版：按模型折叠会话用量，补 DSH 统计不按模型拆分的缺口 |
