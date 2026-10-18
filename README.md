@@ -85,95 +85,38 @@ dsh plugin --profile desktop add file:../../plugins/dsh-model-stats
 
 （cwd = `$DSH_HOME/profiles/desktop`，env 要带 `DSH_HOME` 指向你的 DSH 主目录，否则报「profile 未初始化」）
 
-## 历史
+## 提供方缩写
 
-- 2026-10-15 0.1：初版。**客户端没导出 `exports.inject` → 崩了 DSH 前端**（web boot: 1 entry did not activate）。已修（`inject = ["slots"]` + `apply` 全 try/catch）。
-- 2026-10-15 0.2：加面板级开关（localStorage + ⏸ 按钮 + DevTools 手柄）。
+提供方列显示缩写，悬停可看全名。默认表只收常见官方套餐/coding plan：
 
-## 风格：对齐宿主 StatsPills（0.3.0 重写）
-
-第一版布局不对（⏸ 掉到第二行、硬编码灰色药丸），0.3.0 改成照抄宿主：
-
-| 维度 | 宿主 `StatsPills.module.css` | 本插件 |
-|---|---|---|
-| 根容器 | `display:flex`（**横向**）+ `gap:12px` | 同 |
-| 字号/行高 | `calc(var(--dsh-content-font-size-secondary,13px) - 1px)` / `calc(20px + …delta)` | 同 |
-| 药丸 | `border:none;background:none;border-radius:999px;padding:1px 8px;gap:6px` + `tabular-nums` | 同 |
-| 药丸配色 | 默认 `--dsw-alias-label-tertiary`，hover 才上 `--dsw-alias-interactive-bg-hover` | 同（**不再写死 rgba 灰**） |
-| 展开面板 | `stat-dialog`：`--dsw-specific-menu` + `radius-lg` + `elevation-prominent` + `padding:16px` | 同 |
-| 表格线 | `--dsw-alias-border-l1`（行）/ `--dsw-alias-border-l2`（标题分隔线） | 同 |
-| 图标 | `ui-primitives`（Gauge=速率、Database=用量） | 同款，另加 Chevron 展开 / Pause 关闭 |
-| 错误色 | — | `--dsw-alias-state-error-primary` |
-
-**主题自动适配**：颜色全走 `--dsw-alias-*` 变量，浅色/深色主题不用改代码。
-
-**图标库是可选增强**：`require("@deepseek-ai/dsh-client-ui-primitives")` 包在 try/catch 里，拿不到就退回 `▶ ⏸ ▲ ▼` 字符字形——**绝不会因缺图标导致激活失败**（上次崩就崩在这类没兜底的假设上）。
-
-包已声明：`dsh.client.inject` 增列 `@deepseek-ai/dsh-client-ui-primitives`，`peerDependencies` 同步。
-
-## 0.4.0：对齐宿主弹层行为（三条反馈）
-
-| 反馈 | 改法 |
+| 提供方 | 缩写 |
 |---|---|
-| 风格仍对不上 | 弹层改用**宿主 stat-dialog 规格**：`position:fixed` + `--dsw-specific-menu` + `radius-lg` + `elevation-prominent` + **`elevation-stroke-color`** + `max-width:440px`（原来我开了 660px 且漏了描边色，看着就不一样）|
-| 暂停键不用出现 | **删掉 ⏸**；关闭入口移到**弹层页脚「关闭面板」**（只在展开时可见），重开点药丸 |
-| 点其他地方要自动关 | 照抄宿主 `useStatDialog`：`pointerdown` **捕获阶段**判 `root`/`panel` 都不含 target → 关（`useDismissOnOutsidePointer` 同语义）+ **Escape 关**；弹层 **portal 到 body**，首帧 `MEASURE_STYLE{visibility:hidden}` 占位，交给 `useAnchoredPosition` 测量定位（side=top / gap=8 / margin=12，滚动·缩放·面板尺寸变化都重算并夹视口）|
+| `deepseek` / `deepseek-account` / `deepseek-official` | ds |
+| `zai`（智谱） | z |
+| `glm-coding`（智谱编码套餐） | glm |
+| `kimi` / `moonshot`（月之暗面） | km |
+| `xiaomi-plan` / `xiaomi`（小米） | xmt / xm |
+| `minimax` | mm |
+| `qwen`（通义） | qw |
+| 未登记的提供方 | 首字母小写（兜底） |
 
-> 锚定与图标 hook 在**模块级**探测（`HAS_ANCHOR`）后再**无条件**调用——React 规定 hook 每轮顺序必须一致，条件式调用会打乱。
-
-### 弹层列数
-
-5 列（模型 / 总 token / 输出 / 命中率 / 输出速率），**缓存读与未缓存输入放在模型名的 title 提示里**——为的是守住宿主 440px 的弹层宽度上限，列数硬塞会撑破。悬停模型名即可看全量明细。
-## 0.5.0：接上 composer-glass 的状态胶囊（反馈：「玻璃动效没应用在你这版」）
-
-**他的判断对**：`dsh-composer-glass` 的「状态胶囊」组是按 **`[data-composer-stats]`** 选中宿主 StatsPills 根节点的（源码注释原话：「Both pills already share one root, and that root carries the stable `data-composer-stats` attribute, so a single rule puts BOTH in one chip」），给它套 `width:max-content; padding:2px 10px; gap:8px; border-radius:999px` + 毛玻璃 + `--dsh-glass-chip-halo`。
-
-我原来用的是自造属性 `data-dsh-model-stats` → **选择器根本没命中 → 玻璃不作用**，于是那颗药丸是裸的，和旁边带玻璃的宿主胶囊不统一。
-
-改法：
-
-1. 根节点挂上 **`data-composer-stats: true`**（另存 `data-dsh-model-stats` 供自己调试）—— 已确认全工程**没有任何 `querySelector('[data-composer-stats]')`** 的单例假设，复用安全；
-2. 结构改成 **`wrap → root(玻璃胶囊) → panel(兄弟节点)`**：玻璃规则带 `overflow:hidden`（用来裁药丸 hover 底色），弹层若作为 root 子节点会被裁掉，所以挂到 wrap 上（或门户到 body）；
-3. **刻意不写 `background`/`padding`/`border-radius`**：我的样式表注入更晚、与玻璃规则同优先级会**盖掉玻璃**；宿主 StatsPills 本身也不写这些（只写度量）。
-
-> 结果：玻璃开 → 我这颗也有胶囊；玻璃关 → 我这颗也裸。**同进同出，这才叫风格一致。**
-## 0.5.1
-
-按反馈**去掉触发器右侧的小箭头（Chevron）**——展开/收起已有 `aria-expanded` 与弹层自身表达，箭头冗余。触发器现在是「Gauge 图标 + 标签」两件，和宿主药丸一致。
-
-## 0.5.2
-
-弹层**整行页脚删除**（反馈：「觉得这一段没必要出现」）：「缓存读 · 命中」与表内列重复，「关闭面板」与点外部 / ESC / 再点药丸重复；宿主 stat-dialog 本身也没有页脚。弹层现在只剩「标题 + 分隔线 + 表格」。
-
-> 彻底停用插件：侧栏 → 插件 → `dsh-model-stats`，或控制台 `dshModelStats.off()`（`on()` 打开面板）。
-
-## 0.7.0：补「提供方」（反馈：只显示了模型没显示提供方）
-
-- 宿主半：原聚合键只有 `model`，**没取 provider** → 改为按 `message.source.provider + model` 折叠，行里新增 `provider` 字段（同 model 来自不同提供方时各成一行）。实测多提供方环境下同名模型正确拆行。
-- 客户端：表头 `提供方 / 模型` 拆成 **提供方 | 模型** 两列；提供方单元格只放**首字母大写**（`X` / `W` / `D`），完整值进 `title` 悬停可见；模型列 `title` 改为 `provider / model`。
-- 腾宽度：`.dshms_th/.dshms_td` 内边距 `6px → 4px`，模型列 `max-width 170 → 150px`，新增 `.dshms_prov`（26px、居中、tertiary 色）—— 守住宿主 `440px` 弹层上限不破。
-
-## 0.8.0：提供方缩写表
-
-默认表**只收常见官方套餐 / coding plan**（中转站、私有 provider 不进默认表）：
-
-| 提供方全名 | 缩写 |
-|---|---|
-| `deepseek`、`deepseek-account`、`deepseek-official` | **ds** |
-| `zai`（智谱） | **z** |
-| `glm-coding`（智谱编码套餐） | **glm** |
-| `kimi`、`moonshot`（月之暗面） | **km** |
-| `xiaomi-plan`（小米 token plan） | **xmt** |
-| `xiaomi`（小米 api） | **xm** |
-| `minimax` | **mm** |
-| `qwen`（通义） | **qw** |
-| 未登记的其他提供方 | 首字母小写（兜底） |
-
-实现：客户端 `DEFAULT_PROV_ABBR` 表 + `provAbbr(p)`；单元格显示缩写，`title` 悬停显示「缩写 · 全名」。
-列宽 `26px → 38px`（3 字母码要放得下），去掉 `letter-spacing`。**全表估算 ≤ 宿主 440px 上限的内容宽 408px** ✅
-
-**本机自定义（不进默认表）**：中转站等私有提供方，控制台执行一行即可覆盖/追加（localStorage 持久，刷新生效）：
+中转站等私有提供方不进默认表，控制台一行即可本机自定义（localStorage 持久，刷新生效）：
 
 ```js
-localStorage.setItem("dsh-model-stats:provAbbr", JSON.stringify({"my-relay":"mr","my-backup":"mb"}))
+localStorage.setItem("dsh-model-stats:provAbbr", JSON.stringify({"my-relay":"mr"}))
 ```
+
+## 版本历史
+
+| 版本 | 改动 |
+|---|---|
+| 0.9.0 | 去除硬编码本机路径，只认 `DSH_HOME`；缩写默认表只保留常见官方套餐，私有提供方改走 localStorage 自定义 |
+| 0.8.0 | 提供方缩写表（默认收录常见套餐，3 字母码列宽自适应） |
+| 0.7.0 | 新增提供方列：聚合键改为 provider+model，同名模型来自不同提供方时分行显示 |
+| 0.5.2 | 弹层删除页脚，只保留标题+表格 |
+| 0.5.1 | 触发器去掉小箭头，只留图标+标签 |
+| 0.5.0 | 根节点挂 `data-composer-stats`，与 composer-glass 毛玻璃胶囊联动（玻璃开关同进同出） |
+| 0.4.0 | 弹层对齐宿主 stat-dialog：点击外部/Esc 关闭、portal 到 body、锚定自动定位并夹视口；面板列数定为 5 列（缓存明细进悬停提示） |
+| 0.3.0 | 样式重写：药丸/配色/字号全部走宿主 StatsPills 规格与 `--dsw-alias-*` 主题变量，浅色/深色自动适配 |
+| 0.2.0 | 面板级开关（localStorage 持久，刷新记住） |
+| 0.1.0 | 初版：按模型折叠会话用量，补宿主统计不按模型拆分的缺口 |
