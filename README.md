@@ -1,4 +1,4 @@
-# dsh-model-stats 按模型用量
+﻿# dsh-model-stats 按模型用量
 
 在 DSH 对话界面**输入框那一排**（DSH 统计条旁）加一个小面板：
 按 **提供方 / 模型** 分列显示 —— **总 token、缓存读、未缓存输入、输出、缓存命中率、输出速率(tok/s)**。
@@ -120,3 +120,11 @@ localStorage.setItem("dsh-model-stats:provAbbr", JSON.stringify({"my-relay":"mr"
 | 0.3.0 | 样式重写：药丸/配色/字号全部走 DSH StatsPills 规格与 `--dsw-alias-*` 主题变量，浅色/深色自动适配 |
 | 0.2.0 | 面板级开关（localStorage 持久，刷新记住） |
 | 0.1.0 | 初版：按模型折叠会话用量，补 DSH 统计不按模型拆分的缺口 |
+
+---
+
+## 维护须知（2026-11-12 加）
+
+1. **改完 lib/client.js 一定要同步到 profile**：App 加载的是 pnpm 复制的那份副本（不是软链），路径 D:\dsh\profiles\desktop\node_modules\dsh-model-stats\lib\client.js。只改本目录 = 不生效。双击 同步到profile.cmd 即可（先备份、再覆盖、最后校验哈希）。
+2. **0.2.2-rc.2 兼容补丁**：宿主已移除 @deepseek-ai/dsh-client-ui-primitives 的 useAnchoredPosition（全包 0 命中）。原降级路径 .dshms_panelLocal（absolute + bottom:100%）对 portal 到 body 的面板无效，会把面板顶到视口上方，表现为「点药丸没反应」。现改为自带 useFixedAnchor 按药丸 rect 算 fixed 坐标，并在测量失败时落到 FALLBACK_POS（左下 24/140）保证可见。
+3. 宿主若将来重新提供锚定 hook，HAS_ANCHOR 会自动为 true，仍走宿主坐标，无需改代码。

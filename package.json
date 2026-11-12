@@ -2,7 +2,7 @@
   "name": "dsh-model-stats",
   "displayName": "DSH Model Stats 按模型用量",
   "description": "在对话输入框上方按模型分列显示：输出速率(tok/s)、缓存命中率、总 token。",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "author": "zechen666-creater",
   "type": "module",
   "engines": {
