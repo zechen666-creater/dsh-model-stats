@@ -1,4 +1,4 @@
-﻿# dsh-model-stats 按模型用量
+# dsh-model-stats 按模型用量
 
 在 DSH 对话界面**输入框那一排**（DSH 统计条旁）加一个小面板：
 按 **提供方 / 模型** 分列显示 —— **总 token、缓存读、未缓存输入、输出、缓存命中率、输出速率(tok/s)**。
@@ -110,6 +110,8 @@ localStorage.setItem("dsh-model-stats:provAbbr", JSON.stringify({"my-relay":"mr"
 
 | 版本 | 改动 |
 |---|---|
+| 0.9.2 | 面板定位改「首帧同步测量」：useEffect → useLayoutEffect，并在渲染期先读一次药丸 rect，消除点开时先闪到左下角再跳位 |
+| 0.9.1 | 自带 useFixedAnchor，兼容 0.2.2-rc.2 移除 useAnchoredPosition；补 同步到profile.cmd |
 | 0.9.0 | 去除硬编码本机路径，只认 `DSH_HOME`；缩写默认表只保留常见官方套餐，私有提供方改走 localStorage 自定义 |
 | 0.8.0 | 提供方缩写表（默认收录常见套餐，3 字母码列宽自适应） |
 | 0.7.0 | 新增提供方列：聚合键改为 provider+model，同名模型来自不同提供方时分行显示 |
@@ -125,6 +127,7 @@ localStorage.setItem("dsh-model-stats:provAbbr", JSON.stringify({"my-relay":"mr"
 
 ## 维护须知（2026-11-12 加）
 
-1. **改完 lib/client.js 一定要同步到 profile**：App 加载的是 pnpm 复制的那份副本（不是软链），路径 D:\dsh\profiles\desktop\node_modules\dsh-model-stats\lib\client.js。只改本目录 = 不生效。双击 同步到profile.cmd 即可（先备份、再覆盖、最后校验哈希）。
+1. **改完 lib/client.js 一定要同步到 profile**：App 加载的是 pnpm 复制的那份副本（不是软链），路径 `%DSH_HOME%\profiles\desktop\node_modules\dsh-model-stats\lib\client.js`。只改本目录 = 不生效。双击 同步到profile.cmd 即可（先备份、再覆盖、最后校验哈希）。该脚本不写死任何本机路径：优先用 `DSH_HOME`，未设置时按脚本自身位置向上两级推断，因此可以安全随仓库分发。
 2. **0.2.2-rc.2 兼容补丁**：宿主已移除 @deepseek-ai/dsh-client-ui-primitives 的 useAnchoredPosition（全包 0 命中）。原降级路径 .dshms_panelLocal（absolute + bottom:100%）对 portal 到 body 的面板无效，会把面板顶到视口上方，表现为「点药丸没反应」。现改为自带 useFixedAnchor 按药丸 rect 算 fixed 坐标，并在测量失败时落到 FALLBACK_POS（左下 24/140）保证可见。
 3. 宿主若将来重新提供锚定 hook，HAS_ANCHOR 会自动为 true，仍走宿主坐标，无需改代码。
+4. **「点开先闪到左下角再跳位」的成因（0.9.2 已修）**：旧版在 useEffect 里测量，而 useEffect 在首次 paint **之后**才跑——第一帧画的是 FALLBACK_POS（左下 24/140），下一帧才跳到药丸上方。现在首帧在渲染期同步读一次 rect（渲染期只读 DOM、无副作用，且药丸常驻、ref 一直有值），layout effect 再测一次写入 state 供 resize/scroll 复用，rAF 补测一次等宿主布局稳定。别再把它改回 useEffect。

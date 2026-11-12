@@ -1,14 +1,20 @@
 @echo off
-rem 改完 lib\client.js 后必须跑本脚本：App 加载的是 profile 里的副本，不是本目录。
-rem 用法：双击，或在 PowerShell 里 .\同步到profile.cmd
-setlocal
-set SRC=D:\dsh\plugins\dsh-model-stats\lib\client.js
-set DST=D:\dsh\profiles\desktop\node_modules\dsh-model-stats\lib\client.js
-if not exist "%SRC%" (echo [x] 源文件不存在 & exit /b 1)
-if not exist "%DST%" (echo [x] profile 副本不存在，先 dsh plugin --profile desktop add file:D:/dsh/plugins/dsh-model-stats & exit /b 1)
-copy /Y "%DST%" "%DST%.bak-自动备份" >nul
+rem Copy lib\client.js into the profile copy that the DSH App actually loads.
+rem pnpm installs a real copy (not a symlink), so editing this folder alone has no effect.
+rem Usage: double-click this file, or run it from PowerShell.
+rem Profile location: %DSH_HOME% when set, else derived as two levels above this script.
+rem This file carries no absolute local paths, so it is safe to publish.
+setlocal EnableExtensions
+for %%A in ("%~dp0..\..") do set "DSH_HOME_FALLBACK=%%~fA"
+if not defined DSH_HOME set "DSH_HOME=%DSH_HOME_FALLBACK%"
+set "SRC=%~dp0lib\client.js"
+set "DST=%DSH_HOME%\profiles\desktop\node_modules\dsh-model-stats\lib\client.js"
+if not exist "%SRC%" (echo [x] source not found: %SRC% & exit /b 1)
+if not exist "%DST%" (echo [x] profile copy not found: %DST% & echo     run: dsh plugin --profile desktop add file:. & exit /b 1)
+copy /Y "%DST%" "%DST%.bak-auto" >nul
 copy /Y "%SRC%" "%DST%" >nul
-for /f %%i in ('powershell -NoProfile -Command "(Get-FileHash '%SRC%').Hash"') do set H1=%%i
-for /f %%i in ('powershell -NoProfile -Command "(Get-FileHash '%DST%').Hash"') do set H2=%%i
-if "%H1%"=="%H2%" (echo [ok] 已同步，两侧哈希一致 & echo   %DST%) else (echo [x] 同步后哈希不一致，检查权限)
+powershell -NoProfile -Command "if ((Get-FileHash '%SRC%').Hash -eq (Get-FileHash '%DST%').Hash) { exit 0 } else { exit 1 }" >nul 2>nul
+if errorlevel 1 (echo [x] hash mismatch after copy & exit /b 1)
+echo [ok] synced, both sides hash-equal
+echo   %DST%
 endlocal
